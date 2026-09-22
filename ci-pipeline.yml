@@ -24,10 +24,13 @@ steps:
   displayName: 'Build application'
 
 - task: Docker@2
-  displayName: 'Build Docker image'
+  displayName: 'Build and Push Docker image'
   inputs:
-    command: 'build'
+    containerRegistry: 'dockerhub-connection'
+    repository: 'vishalkangude/payment-platform'
+    command: 'buildAndPush'
     Dockerfile: '$(Build.SourcesDirectory)/payment-api/Dockerfile'
     buildContext: '$(Build.SourcesDirectory)/payment-api'
     tags: |
-      payment-platform:$(Build.BuildId)
+      $(Build.BuildId)
+      latest
