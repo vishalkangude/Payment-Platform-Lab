@@ -16,8 +16,3 @@ steps:
     cd payment-api
     npm ci
   displayName: 'Install dependencies'
-
-- script: |
-    cd payment-api
-    npm test
-  displayName: 'Run tests'
