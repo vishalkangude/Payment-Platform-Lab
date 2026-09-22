@@ -5,6 +5,7 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
+
 - checkout: self
 
 - task: NodeTool@0
@@ -14,5 +15,10 @@ steps:
 
 - script: |
     cd payment-api
-    npm ci
-  displayName: 'Install dependencies'
+    npm run install:all
+  displayName: 'Install application dependencies'
+
+- script: |
+    cd payment-api
+    npm run build
+  displayName: 'Build application'
