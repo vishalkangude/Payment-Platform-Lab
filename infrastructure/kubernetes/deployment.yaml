@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-platform
+  template:
+    metadata:
+      labels:
+        app: payment-platform
+    spec:
+      containers:
+        - name: payment-platform
+          image: vishalkangude/payment-platform:1.0
+          ports:
+            - containerPort: 3000
