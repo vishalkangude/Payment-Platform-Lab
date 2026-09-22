@@ -1,0 +1,23 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- checkout: self
+
+- task: NodeTool@0
+  inputs:
+    versionSpec: '20.x'
+  displayName: 'Install Node.js'
+
+- script: |
+    cd payment-api
+    npm ci
+  displayName: 'Install dependencies'
+
+- script: |
+    cd payment-api
+    npm test
+  displayName: 'Run tests'
