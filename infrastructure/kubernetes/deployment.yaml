@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
         - name: payment-platform
-          image: vishalkangude/payment-platform:1.0
+          image: vishalkangude/payment-platform:IMAGE_TAG
           ports:
             - containerPort: 3000

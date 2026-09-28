@@ -4,33 +4,106 @@ trigger:
 pool:
   vmImage: ubuntu-latest
 
-steps:
+stages:
 
-- checkout: self
+# =========================
+# CI - Build and Push
+# =========================
+- stage: Build
+  displayName: Build and Push Docker Image
 
-- task: NodeTool@0
-  inputs:
-    versionSpec: '20.x'
-  displayName: 'Install Node.js'
+  jobs:
+  - job: BuildAndPush
+    displayName: Build Application and Docker Image
 
-- script: |
-    cd payment-api
-    npm run install:all
-  displayName: 'Install application dependencies'
+    steps:
 
-- script: |
-    cd payment-api
-    npm run build
-  displayName: 'Build application'
+    - checkout: self
 
-- task: Docker@2
-  displayName: 'Build and Push Docker image'
-  inputs:
-    containerRegistry: 'dockerhub-connection'
-    repository: 'vishalkangude/payment-platform'
-    command: 'buildAndPush'
-    Dockerfile: '$(Build.SourcesDirectory)/payment-api/Dockerfile'
-    buildContext: '$(Build.SourcesDirectory)/payment-api'
-    tags: |
-      $(Build.BuildId)
-      latest
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '20.x'
+      displayName: 'Install Node.js'
+
+    - script: |
+        cd payment-api
+        npm run install:all
+      displayName: 'Install application dependencies'
+
+    - script: |
+        cd payment-api
+        npm run build
+      displayName: 'Build application'
+
+    - task: Docker@2
+      displayName: 'Build and Push Docker image'
+      inputs:
+        containerRegistry: 'dockerhub-connection'
+        repository: 'vishalkangude/payment-platform'
+        command: 'buildAndPush'
+        Dockerfile: '$(Build.SourcesDirectory)/payment-api/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)/payment-api'
+        tags: |
+          $(Build.BuildId)
+          latest
+
+
+# =========================
+# CD - Deploy to AKS
+# =========================
+- stage: Deploy
+  displayName: Deploy to AKS
+
+  dependsOn: Build
+  condition: succeeded()
+
+  jobs:
+  - job: DeployToAKS
+    displayName: Deploy Application to AKS
+
+    steps:
+
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: 'Deploy to AKS'
+      inputs:
+        azureSubscription: 'azure-aks-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+
+        inlineScript: |
+
+          echo "Getting AKS credentials..."
+
+          az aks get-credentials \
+            --resource-group rg-payment-platform \
+            --name aks-payment-platform \
+            --overwrite-existing
+
+          echo "Using Docker image:"
+          echo "vishalkangude/payment-platform:$(Build.BuildId)"
+
+          echo "Updating image tag..."
+
+          sed -i "s/IMAGE_TAG/$(Build.BuildId)/g" \
+            infrastructure/kubernetes/deployment.yaml
+
+          echo "Deploying Kubernetes manifests..."
+
+          kubectl apply -f infrastructure/kubernetes/deployment.yaml
+
+          kubectl apply -f infrastructure/kubernetes/service.yaml
+
+          echo "Waiting for deployment..."
+
+          kubectl rollout status deployment/payment-platform \
+            --timeout=180s
+
+          echo "Deployment completed."
+
+          echo "Pods:"
+          kubectl get pods
+
+          echo "Service:"
+          kubectl get service payment-platform
